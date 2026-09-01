@@ -41,3 +41,9 @@ asyncio_mode = "auto"
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+extend-exclude = [
+    "accuracy_test",
+    "benchmarks",
+    "deployment",
+    "docs/superpowers",
+]

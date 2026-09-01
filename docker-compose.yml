@@ -1,0 +1,15 @@
+services:
+  polyocr:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      POLYOCR_API_KEY: "${POLYOCR_API_KEY:?set POLYOCR_API_KEY}"
+      POLYOCR_AUTH_ENABLED: "${POLYOCR_AUTH_ENABLED:-true}"
+      POLYOCR_MODEL_CACHE_DIR: /home/polyocr/.cache/polyocr
+    volumes:
+      - polyocr-models:/home/polyocr/.cache/polyocr
+    restart: unless-stopped
+
+volumes:
+  polyocr-models:
