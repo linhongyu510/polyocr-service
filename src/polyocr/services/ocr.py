@@ -61,11 +61,11 @@ def normalize_ocr_result(result: Any, score_threshold: float) -> list[OCRItem]:
                 text, score = recognition
                 numeric_score = float(score)
             except (TypeError, ValueError) as exc:
-                raise ServiceError("invalid_ocr_result", "Unexpected OCR result structure.", 500) from exc
+                raise ServiceError(
+                    "invalid_ocr_result", "Unexpected OCR result structure.", 500
+                ) from exc
             if numeric_score >= score_threshold:
-                items.append(
-                    OCRItem(text=str(text), score=numeric_score, bbox=_plain_list(bbox))
-                )
+                items.append(OCRItem(text=str(text), score=numeric_score, bbox=_plain_list(bbox)))
     return items
 
 
