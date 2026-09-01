@@ -1,14 +1,19 @@
 from collections.abc import Callable
+from pathlib import Path
 from uuid import uuid4
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from polyocr.api.errors import ServiceError, service_error_handler
 from polyocr.api.routes import health, languages, ocr, translation
 from polyocr.core.config import Settings, get_settings
 from polyocr.services.model_manager import ModelManager, OCRBackend
 from polyocr.services.ocr import OCRService
+
+WEB_DIR = Path(__file__).resolve().parents[2] / "web"
 
 
 def _paddle_factory(**kwargs: object) -> OCRBackend:
@@ -46,6 +51,12 @@ def create_app(
         return response
 
     app.add_exception_handler(ServiceError, service_error_handler)
+    app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
+
+    @app.get("/", include_in_schema=False)
+    async def web_index() -> FileResponse:
+        return FileResponse(WEB_DIR / "index.html")
+
     app.include_router(health.router)
     app.include_router(languages.router)
     app.include_router(ocr.router)
