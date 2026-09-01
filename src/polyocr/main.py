@@ -13,7 +13,7 @@ from polyocr.core.config import Settings, get_settings
 from polyocr.services.model_manager import ModelManager, OCRBackend
 from polyocr.services.ocr import OCRService
 
-WEB_DIR = Path(__file__).resolve().parents[2] / "web"
+WEB_DIR = Path(__file__).resolve().parent / "web"
 
 
 def _paddle_factory(**kwargs: object) -> OCRBackend:
