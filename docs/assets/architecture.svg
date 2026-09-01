@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="420" viewBox="0 0 960 420" role="img" aria-labelledby="title desc">
+  <title id="title">PolyOCR Service architecture</title>
+  <desc id="desc">Clients call the FastAPI service, which uses PaddleOCR locally and optional external translation and VL services.</desc>
+  <rect width="960" height="420" rx="24" fill="#f6f8fc"/>
+  <g font-family="system-ui, sans-serif" text-anchor="middle">
+    <rect x="45" y="150" width="180" height="110" rx="16" fill="#fff" stroke="#3157d5" stroke-width="3"/>
+    <text x="135" y="195" font-size="22" fill="#172033">Web / API Client</text>
+    <text x="135" y="226" font-size="15" fill="#526079">Image + API Key</text>
+    <rect x="320" y="90" width="300" height="230" rx="20" fill="#3157d5"/>
+    <text x="470" y="140" font-size="25" font-weight="700" fill="#fff">PolyOCR Service</text>
+    <text x="470" y="185" font-size="17" fill="#e8edff">FastAPI routes and security</text>
+    <text x="470" y="220" font-size="17" fill="#e8edff">Validation and normalization</text>
+    <text x="470" y="255" font-size="17" fill="#e8edff">Language-aware model cache</text>
+    <rect x="710" y="45" width="205" height="90" rx="16" fill="#fff" stroke="#28a477" stroke-width="3"/>
+    <text x="812" y="82" font-size="20" fill="#172033">PaddleOCR</text>
+    <text x="812" y="108" font-size="14" fill="#526079">Local OCR backend</text>
+    <rect x="710" y="165" width="205" height="90" rx="16" fill="#fff" stroke="#cc7a29" stroke-width="3"/>
+    <text x="812" y="202" font-size="20" fill="#172033">Translation</text>
+    <text x="812" y="228" font-size="14" fill="#526079">Optional provider</text>
+    <rect x="710" y="285" width="205" height="90" rx="16" fill="#fff" stroke="#8758c7" stroke-width="3"/>
+    <text x="812" y="322" font-size="20" fill="#172033">PaddleOCR-VL</text>
+    <text x="812" y="348" font-size="14" fill="#526079">Separate deployment</text>
+  </g>
+  <g fill="none" stroke="#526079" stroke-width="3">
+    <path d="M225 205H320"/>
+    <path d="M620 145L710 90"/>
+    <path d="M620 205H710"/>
+    <path d="M620 265L710 330" stroke-dasharray="8 7"/>
+  </g>
+  <g fill="#526079">
+    <path d="M320 205l-12-7v14z"/>
+    <path d="M710 90l-13-1 7 12z"/>
+    <path d="M710 205l-12-7v14z"/>
+    <path d="M710 330l-7-12-7 12z"/>
+  </g>
+</svg>
