@@ -161,7 +161,7 @@ def main():
     """主函数"""
     tester = OCRLanguageTester(
         api_base_url="http://localhost:16110",
-        api_key="PolyNex-PolyOCR-2025xm"
+        api_key=os.environ.get("POLYOCR_API_KEY", "")
     )
     
     results = tester.test_all_supported_languages()
@@ -172,6 +172,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
 

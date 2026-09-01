@@ -2,10 +2,10 @@
 
 ## 🚀 部署概述
 
-PaddleOCR服务已成功部署在公网服务器 `43.137.12.144` 上，其他计算机可以通过以下地址访问：
+以下示例假设服务运行在本机：
 
-- **🌐 Web界面**: http://43.137.12.144:8000
-- **🔧 API接口**: http://43.137.12.144:16110
+- **Web 界面**: http://localhost:8000
+- **API 接口**: http://localhost:8000
 
 ## 📋 服务功能
 
@@ -27,10 +27,10 @@ API调用需要认证，使用以下任一方式：
 
 ```bash
 # 方式1: X-API-Key头
-curl -H "X-API-Key: PolyNex-PolyOCR-2025xm" ...
+curl -H "X-API-Key: ${POLYOCR_API_KEY}" ...
 
 # 方式2: Bearer Token
-curl -H "Authorization: Bearer PolyNex-PolyOCR-2025xm" ...
+curl -H "Authorization: Bearer ${POLYOCR_API_KEY}" ...
 ```
 
 ## 📝 API使用示例
@@ -38,10 +38,10 @@ curl -H "Authorization: Bearer PolyNex-PolyOCR-2025xm" ...
 ### 图片OCR识别
 ```bash
 curl -X POST \
-  -H "X-API-Key: PolyNex-PolyOCR-2025xm" \
+  -H "X-API-Key: ${POLYOCR_API_KEY}" \
   -F "file=@image.jpg" \
   -F "language=en" \
-  http://43.137.12.144:16110/v1/ocr
+  http://localhost:8000/v1/ocr
 ```
 
 ### 支持的语言代码
@@ -138,5 +138,5 @@ pkill -f "python3.*frontend_server.py"
 ---
 
 **部署时间**: $(date)  
-**服务器地址**: 43.137.12.144  
+**服务器地址**: 由部署者配置
 **维护人员**: System Administrator

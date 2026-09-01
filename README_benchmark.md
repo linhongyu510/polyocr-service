@@ -6,10 +6,9 @@
 
 ```bash
 python3 benchmarks/download_datasets.py
-python3 benchmarks/run_benchmark.py --server http://43.137.12.144:16110 --score 0.5 --preprocess true
+POLYOCR_API_KEY=change-me python3 benchmarks/run_simple_eval.py --server http://localhost:8000 --score 0.5
 python3 benchmarks/evaluate_results.py --results benchmarks/results
 ```
 
 注意：所有文件使用 UTF-8 编码，评估时按语言独立统计，避免编码问题。
-
 
