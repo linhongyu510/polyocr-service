@@ -1,9 +1,9 @@
 import secrets
 from typing import Annotated
 
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Header, HTTPException, Request, status
 
-from polyocr.core.config import Settings, get_settings
+from polyocr.core.config import Settings
 
 
 def verify_api_key(
@@ -22,10 +22,11 @@ def verify_api_key(
 
 
 def require_api_key(
+    request: Request,
     authorization: Annotated[str | None, Header()] = None,
     x_api_key: Annotated[str | None, Header()] = None,
-    settings: Annotated[Settings, Depends(get_settings)] = None,
 ) -> None:
+    settings: Settings = request.app.state.settings
     if not settings.auth_enabled:
         return
     bearer_key = None

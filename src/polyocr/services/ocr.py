@@ -6,6 +6,7 @@ from PIL import Image, UnidentifiedImageError
 
 from polyocr.api.errors import ServiceError
 from polyocr.schemas.ocr import OCRItem
+from polyocr.services.model_manager import ModelManager
 
 
 def _plain_list(value: Any) -> Any:
@@ -66,3 +67,19 @@ def normalize_ocr_result(result: Any, score_threshold: float) -> list[OCRItem]:
                     OCRItem(text=str(text), score=numeric_score, bbox=_plain_list(bbox))
                 )
     return items
+
+
+class OCRService:
+    def __init__(self, model_manager: ModelManager) -> None:
+        self._model_manager = model_manager
+
+    def recognize(
+        self,
+        image: Image.Image,
+        language: str,
+        score_threshold: float,
+        preprocess: bool,
+    ) -> list[OCRItem]:
+        model = self._model_manager.get(language)
+        result = model.ocr(image, cls=preprocess)
+        return normalize_ocr_result(result, score_threshold)
