@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from polyocr.api.errors import ServiceError, service_error_handler
-from polyocr.api.routes import health, languages, ocr
+from polyocr.api.routes import health, languages, ocr, translation
 from polyocr.core.config import Settings, get_settings
 from polyocr.services.model_manager import ModelManager, OCRBackend
 from polyocr.services.ocr import OCRService
@@ -49,4 +49,5 @@ def create_app(
     app.include_router(health.router)
     app.include_router(languages.router)
     app.include_router(ocr.router)
+    app.include_router(translation.router)
     return app
