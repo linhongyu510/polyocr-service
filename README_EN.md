@@ -42,14 +42,27 @@ cp .env.example .env
 Replace the sample API keys in `.env`, then start the service:
 
 ```bash
-uvicorn polyocr.main:create_app --factory --host 0.0.0.0 --port 8000
+# Loopback only, recommended for local development
+polyocr-service
+
+# Or via uvicorn, with an explicit bind address
+uvicorn polyocr.main:create_app --factory --host 127.0.0.1 --port 8000
 ```
 
-An installed distribution also exposes a console script (defaults to `127.0.0.1:8000`):
+The console script defaults to `127.0.0.1:8000` and also reads `POLYOCR_HOST` /
+`POLYOCR_PORT`.
+
+**On bind addresses**: `--host 0.0.0.0` publishes the service on every network
+interface. A container needs that — otherwise the mapped port is unreachable, and the
+Dockerfile sets it explicitly for that reason — but on a laptop or a shared network it
+makes your instance reachable by anyone on the LAN. Widen it deliberately when you
+actually want that:
 
 ```bash
-polyocr-service --host 0.0.0.0 --port 8000
+POLYOCR_HOST=0.0.0.0 polyocr-service        # or polyocr-service --host 0.0.0.0
 ```
+
+The `python main.py` compatibility entry point also defaults to `127.0.0.1`.
 
 Open `http://localhost:8000/` for the web client or `/docs` for the API documentation.
 

@@ -1,5 +1,6 @@
 """Packaging contract: license, typing marker, entry point and metadata."""
 
+import ast
 from importlib.metadata import entry_points, metadata
 from importlib.resources import files
 from pathlib import Path
@@ -176,3 +177,48 @@ def test_no_source_file_imports_a_module_newer_than_the_supported_floor() -> Non
         for name in sorted(too_new & modules):
             offenders.append(f"{path.relative_to(ROOT)} imports {name}")
     assert not offenders, f"requires-python is >={floor[0]}.{floor[1]}: {offenders}"
+
+
+def test_compatibility_shims_only_re_export() -> None:
+    """The root modules are a back-compat layer, not a second implementation.
+
+    They predate the src/polyocr package layout. Keeping them is fine; letting logic
+    reappear in them is not, because then two copies of the same behaviour drift.
+    """
+    for name in ("auth.py", "translation.py"):
+        source = (ROOT / name).read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        for node in tree.body:
+            assert isinstance(
+                node,
+                (ast.Import, ast.ImportFrom, ast.Assign, ast.Expr),
+            ), f"{name} gained logic beyond re-exports: {type(node).__name__}"
+
+
+def test_no_entry_point_binds_every_interface_by_default() -> None:
+    """`python main.py` used to bind 0.0.0.0 while `polyocr-service` bound loopback.
+
+    Same product, two entry points, opposite network exposure -- and the wide one was
+    the undocumented default. The container still binds 0.0.0.0, but does so explicitly
+    in its CMD, where publishing a port is the whole point.
+    """
+    cli = (ROOT / "src/polyocr/__main__.py").read_text(encoding="utf-8")
+    assert '"127.0.0.1"' in cli, "the CLI should default to loopback"
+
+    shim = (ROOT / "main.py").read_text(encoding="utf-8")
+    tree = ast.parse(shim)
+    literals = {
+        node.value
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Constant) and isinstance(node.value, str)
+    }
+    bare_strings = {value for value in literals if value == "0.0.0.0"}
+    assert not bare_strings, "the compatibility entry point must not default to 0.0.0.0"
+    assert '"127.0.0.1"' in shim, "the compatibility entry point should default to loopback"
+    assert "POLYOCR_HOST" in shim, "operators need an explicit override to widen the bind"
+
+
+def test_container_binds_all_interfaces_explicitly() -> None:
+    """The exposure that is correct in a container should stay visible in the CMD."""
+    dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+    assert "--host" in dockerfile and "0.0.0.0" in dockerfile

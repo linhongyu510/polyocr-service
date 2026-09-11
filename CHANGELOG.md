@@ -29,6 +29,32 @@ All notable changes to this project are documented here. This project follows
   global ink contrast at only −0.262 (the lowest-contrast image scores 0.947) and with
   local text-to-background contrast at +0.027. No mechanism is claimed.
 
+### Fixed
+
+- **The `python main.py` compatibility entry point silently bound `0.0.0.0`**, publishing
+  the service on every network interface, while the packaged `polyocr-service` console
+  script deliberately defaults to `127.0.0.1`. Two entry points to the same product had
+  opposite network exposure, and the wide one was the undocumented default. Both now
+  default to loopback; `POLYOCR_HOST` / `POLYOCR_PORT` widen it deliberately. The
+  container still binds `0.0.0.0` explicitly in its `CMD`, which is correct there.
+- **The credential-scanning test audited third-party dependencies.** It walked
+  `ROOT.rglob("*")` with no exclusion for virtual environments, so with a `.venv` in the
+  repository it read 1735 dependency files — 97% of everything it scanned, 24 MB — and
+  any dependency that merely mentioned a forbidden string failed the build with a message
+  pointing at the test rather than the file. The scan is now limited to project sources
+  and reports the offending path. Verified both ways: a planted dependency file no longer
+  fails the build, a planted project file still does and is named.
+- Suite runtime dropped from 6.9s to 1.8s as a side effect of not reading 24 MB of
+  dependency source on every run.
+
+### Added (tooling and docs)
+
+- Contract tests pinning that no entry point defaults to `0.0.0.0`, that the container
+  keeps binding it explicitly, that the root compatibility modules stay pure re-exports,
+  and that the credential scan cannot reach outside the project.
+- Both READMEs now explain when `0.0.0.0` is appropriate instead of showing it as the
+  default invocation.
+
 ## [0.4.0] - 2026-09-05
 
 ### Fixed

@@ -36,14 +36,24 @@ cp .env.example .env
 修改 `.env` 中的 API Key 后启动：
 
 ```bash
-uvicorn polyocr.main:create_app --factory --host 0.0.0.0 --port 8000
+# 仅本机访问（推荐用于本地开发）
+polyocr-service
+
+# 或用 uvicorn，显式指定监听地址
+uvicorn polyocr.main:create_app --factory --host 127.0.0.1 --port 8000
 ```
 
-安装后也可以直接使用命令行入口（默认监听 `127.0.0.1:8000`）：
+命令行入口默认监听 `127.0.0.1:8000`，也可用 `POLYOCR_HOST` / `POLYOCR_PORT` 配置。
+
+**关于监听地址**：`--host 0.0.0.0` 会把服务暴露在所有网络接口上。容器内需要这样做
+（否则映射端口无法访问，Dockerfile 已显式这样配置），但在笔记本或共享网络上直接跑时，
+它会让局域网内任何人都能访问你的实例。需要对外提供服务时再显式放开：
 
 ```bash
-polyocr-service --host 0.0.0.0 --port 8000
+POLYOCR_HOST=0.0.0.0 polyocr-service        # 或 polyocr-service --host 0.0.0.0
 ```
+
+兼容入口 `python main.py` 同样默认只监听 `127.0.0.1`。
 
 访问 `http://localhost:8000/` 使用 Web 页面，API 文档位于 `/docs`。
 
