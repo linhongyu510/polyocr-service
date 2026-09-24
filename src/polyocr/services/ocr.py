@@ -4,13 +4,50 @@ import asyncio
 import io
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
 from PIL import Image, UnidentifiedImageError
 
 from polyocr.api.errors import ServiceError
-from polyocr.schemas.ocr import OCRItem
+from polyocr.schemas.ocr import OCRItem, OCRWarning
+
+# Default Laplacian-variance floor below which a sharp-looking recognition is
+# treated as suspicious. Calibrated on the robustness corpus (docs/robustness.md):
+# clean/gaussian-degraded photos score well above this, while the 15px motion-blur
+# samples that return confidently-scored nonsense fall underneath it. It is a
+# heuristic pre-warning, not a hard gate, and is configurable per deployment.
+DEFAULT_BLUR_VARIANCE_FLOOR = 45.0
+
+
+def laplacian_variance(image: np.ndarray) -> float:
+    """Return the variance of the Laplacian of ``image`` (focus measure).
+
+    A low value means few sharp edges, i.e. a blurred image. This is the classic
+    Pech-Pacheco focus measure, implemented in pure NumPy (no OpenCV dependency).
+    """
+
+    array = np.asarray(image)
+    if array.ndim == 3:
+        # Rec. 601 luma weights; float64 keeps the variance numerically stable.
+        gray = array[..., :3].astype(np.float64) @ np.array([0.299, 0.587, 0.114])
+    else:
+        gray = array.astype(np.float64)
+    if gray.shape[0] < 3 or gray.shape[1] < 3:
+        # Too small for a 3x3 kernel; report high sharpness so we never warn.
+        return float("inf")
+    center = gray[1:-1, 1:-1]
+    laplacian = gray[:-2, 1:-1] + gray[2:, 1:-1] + gray[1:-1, :-2] + gray[1:-1, 2:] - 4.0 * center
+    return float(laplacian.var())
+
+
+@dataclass
+class OCRResult:
+    """OCR items plus any advisory warnings (e.g. suspected motion blur)."""
+
+    items: list[OCRItem]
+    warnings: list[OCRWarning] = field(default_factory=list)
 
 
 def validate_score_threshold(value: float) -> float:
@@ -161,10 +198,12 @@ class OCRService:
         max_pixels: int = 25_000_000,
         max_concurrency: int = 2,
         workers: int = 2,
+        blur_variance_floor: float = DEFAULT_BLUR_VARIANCE_FLOOR,
     ) -> None:
         self._backend_provider = backend_provider
         self._max_bytes = max_bytes
         self._max_pixels = max_pixels
+        self._blur_variance_floor = blur_variance_floor
         self._semaphore = asyncio.Semaphore(max_concurrency)
         self._executor = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="polyocr")
 
@@ -184,6 +223,24 @@ class OCRService:
         max_bytes: int | None = None,
         max_pixels: int | None = None,
     ) -> list[OCRItem]:
+        result = await self.recognize_detailed(
+            data,
+            language,
+            score_threshold,
+            max_bytes=max_bytes,
+            max_pixels=max_pixels,
+        )
+        return result.items
+
+    async def recognize_detailed(
+        self,
+        data: bytes,
+        language: str,
+        score_threshold: float,
+        *,
+        max_bytes: int | None = None,
+        max_pixels: int | None = None,
+    ) -> OCRResult:
         threshold = validate_score_threshold(score_threshold)
         image = decode_image(
             data,
@@ -198,7 +255,34 @@ class OCRService:
                 language,
                 image,
             )
-        return normalize_ocr_result(result, threshold)
+        items = normalize_ocr_result(result, threshold)
+        return OCRResult(items=items, warnings=self._blur_warnings(image, items))
+
+    def _blur_warnings(self, image: np.ndarray, items: list[OCRItem]) -> list[OCRWarning]:
+        # Only warn when the model *did* return confident-looking text: a low
+        # focus measure on an otherwise-empty result is just a blank/blurred page
+        # and needs no advisory. Motion blur is dangerous precisely because it
+        # yields high-confidence wrong text (docs/robustness.md), so we surface it.
+        if not items:
+            return []
+        variance = laplacian_variance(image)
+        if variance >= self._blur_variance_floor:
+            return []
+        return [
+            OCRWarning(
+                code="suspected_blur",
+                message=(
+                    "Image sharpness is low (Laplacian variance "
+                    f"{variance:.1f} < {self._blur_variance_floor:.1f}). Motion blur can "
+                    "produce confidently-scored but incorrect text; treat these results "
+                    "with caution. See docs/robustness.md."
+                ),
+                detail={
+                    "laplacian_variance": round(variance, 3),
+                    "threshold": self._blur_variance_floor,
+                },
+            )
+        ]
 
     def close(self) -> None:
         self._executor.shutdown(wait=True, cancel_futures=True)

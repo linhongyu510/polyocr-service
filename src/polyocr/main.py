@@ -40,6 +40,7 @@ def create_app(
             max_pixels=active_settings.max_image_pixels,
             max_concurrency=active_settings.max_concurrency,
             workers=active_settings.ocr_workers,
+            blur_variance_floor=active_settings.blur_variance_floor,
         )
     if translation_service is None:
         translation_service = TranslationService(
@@ -151,7 +152,7 @@ def create_app(
         resolved = resolve_language(selected_language)
         data = await file.read(active_settings.max_upload_bytes + 1)
         started = time.perf_counter()
-        items = await ocr_service.recognize(
+        result = await ocr_service.recognize_detailed(
             data,
             resolved.code,
             score_threshold,
@@ -162,7 +163,8 @@ def create_app(
             request_id=request.state.request_id,
             cost_ms=round((time.perf_counter() - started) * 1000, 3),
             language=resolved.code,
-            items=items,
+            items=result.items,
+            warnings=result.warnings,
         )
 
     async def run_translation(

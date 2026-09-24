@@ -99,9 +99,30 @@ curl -X POST http://localhost:8000/v1/ocr \
   "request_id": "...",
   "cost_ms": 412.7,
   "language": "fr",
-  "items": [{"text": "Bonjour", "score": 0.99, "bbox": [12, 8, 96, 34]}]
+  "items": [{"text": "Bonjour", "score": 0.99, "bbox": [12, 8, 96, 34]}],
+  "warnings": []
 }
 ```
+
+当输入疑似运动模糊时（图像拉普拉斯方差低于阈值、但模型仍返回了高置信文本），响应会附带一条
+`suspected_blur` 预警——运动模糊的危险之处在于它会返回**置信度正常但内容错误**的文本，调用方
+本来无法区分（见下文鲁棒性基准），此预警把「无法区分」变成「可区分」：
+
+```json
+{
+  "items": [{"text": "Heelco Ncotec", "score": 0.97, "bbox": [10, 8, 220, 44]}],
+  "warnings": [
+    {
+      "code": "suspected_blur",
+      "message": "Image sharpness is low (Laplacian variance 3.1 < 45.0). Motion blur can produce confidently-scored but incorrect text; treat these results with caution. See docs/robustness.md.",
+      "detail": {"laplacian_variance": 3.114, "threshold": 45.0}
+    }
+  ]
+}
+```
+
+阈值可通过 `POLYOCR_BLUR_VARIANCE_FLOOR` 调整（默认 `45.0`）；仅在模型确实返回了文本时才评估，
+空结果不产生预警。
 
 翻译：
 
@@ -135,6 +156,7 @@ curl -X POST http://localhost:8000/v2/translate \
 | `POLYOCR_MAX_IMAGE_PIXELS` | `25000000` | 解码后像素上限 |
 | `POLYOCR_MAX_CONCURRENCY` | `2` | 同时运行的 OCR 推理数 |
 | `POLYOCR_OCR_WORKERS` | `2` | OCR 工作线程数 |
+| `POLYOCR_BLUR_VARIANCE_FLOOR` | `45.0` | 拉普拉斯方差低于此值且有文本时附带 `suspected_blur` 预警 |
 | `POLYOCR_MAX_TRANSLATION_ITEMS` | `50` | 单次翻译条目上限 |
 | `POLYOCR_MAX_TRANSLATION_CHARS` | `20000` | 单次翻译总字符上限 |
 | `TRANSLATION_API_KEY` | 无 | OpenAI 兼容翻译服务密钥 |
@@ -216,8 +238,15 @@ python benchmarks/run_robustness_benchmark.py --compare-preprocess
 「透视 + 光照渐变 + 纹理 + 压缩」的组合拍照场景反而是满分。真正的失效只有**细节丢失**一类：
 模糊超过约 σ2、缩小到 25% 以下。
 
+![鲁棒性基准：各退化下的逐行完全匹配率](docs/assets/robustness.png)
+
+> 图表由 `python benchmarks/plot_robustness.py` 生成（数据源自 [`docs/robustness.md`](docs/robustness.md)）。
+> 绿色为可用（exact ≥ 0.5），红色为实际不可读；虚线为 0.5 参考线。
+
 **唯一需要警惕的是运动模糊**：15px 位移下会返回**置信度正常的错误文本**（`Hello World` →
-`Heelco Ncotec`），而非空结果，调用方无法区分。9px 以内完全正常。
+`Heelco Ncotec`），而非空结果，调用方无法区分。9px 以内完全正常。为此服务在响应中提供
+`suspected_blur` 预警（基于拉普拉斯方差的对焦度量，见上文 API 一节）：把「调用方无法区分」
+变成「可区分」，阈值可通过 `POLYOCR_BLUR_VARIANCE_FLOOR` 配置。
 
 `preprocess` 参数**未实现**：五种预处理管线在全部 17 种退化上均为净负收益，自动对比度在
 17 项里害了 11 项（软阴影 −0.517、纸张纹理 −0.450）。连专门针对不均匀光照的局部

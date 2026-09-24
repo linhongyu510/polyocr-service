@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     max_image_pixels: PositiveInt = 25_000_000
     max_concurrency: PositiveInt = 2
     ocr_workers: PositiveInt = 2
+    blur_variance_floor: float = 45.0
     default_language: str = "ch"
     max_translation_items: PositiveInt = 50
     max_translation_chars: PositiveInt = 20_000

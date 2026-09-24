@@ -19,3 +19,4 @@ benchmarks/results/
 # Real photograph benchmark data: downloaded at runtime, never committed.
 # CORD-v2 images are photographs of real receipts; see benchmarks/run_photo_benchmark.py
 benchmarks/photo_dataset/
+.venv_test/
